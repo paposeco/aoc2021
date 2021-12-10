@@ -226,8 +226,12 @@ const fillMapDiagonalHashTable = function (file: string): Map<string, number> {
         if (!checkLocationExists) {
           locations.set(locationAlias, 1);
         } else {
-          const currentcount: number = locations.get(locationAlias);
-          locations.set(locationAlias, currentcount + 1);
+          
+            const currentcount: number | undefined = locations.get(locationAlias);
+            if(currentcount!==undefined){
+                locations.set(locationAlias, currentcount + 1);                
+            }
+
         }
       }
     } else if (y1 === y2) {
@@ -239,8 +243,11 @@ const fillMapDiagonalHashTable = function (file: string): Map<string, number> {
         if (!checkLocationExists) {
           locations.set(locationAlias, 1);
         } else {
-          const currentcount: number = locations.get(locationAlias);
-          locations.set(locationAlias, currentcount + 1);
+            const currentcount: number | undefined = locations.get(locationAlias);
+            if(currentcount !== undefined){
+                locations.set(locationAlias, currentcount + 1);
+            }
+          
         }
       }
     } else {
@@ -253,8 +260,11 @@ const fillMapDiagonalHashTable = function (file: string): Map<string, number> {
         if (!checkLocationExists) {
           locations.set(locationAlias, 1);
         } else {
-          const currentcount: number = locations.get(locationAlias);
-          locations.set(locationAlias, currentcount + 1);
+            const currentcount: number | undefined = locations.get(locationAlias);
+            if(currentcount !== undefined){
+                locations.set(locationAlias, currentcount + 1);
+            }
+          
         }
       }
     }
