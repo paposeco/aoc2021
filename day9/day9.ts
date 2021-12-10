@@ -90,10 +90,6 @@ const findLowPoints = function (file: string) {
             const rightnumber = Number(row[j + 1]);
             if (currentnumber < leftnumber && currentnumber < rightnumber) {
               lowpoints.push({ i: i, j: j, lowpoint: currentnumber });
-              console.log(uprow[j - 1], upnumber, uprow[j + 1]);
-              console.log(leftnumber, currentnumber, rightnumber);
-              console.log(downrow[j - 1], downnumber, downrow[j + 1]);
-              console.log("****");
             }
           }
         }
@@ -112,32 +108,13 @@ const calculateRisk = function (file: string) {
   return sum;
 };
 
-const checkBasin = function (file: string) {
-  let lowpoints = findLowPoints(file);
-  let input = prepFile(file);
-  const maxI = Number(input.length - 1);
-  const maxJ = Number(input[0].length - 1);
-  let basins: number[] = [];
-  for (let k = 0; k < lowpoints.length; k++) {
-    const currentlowpointI = Number(lowpoints[k].i);
-    const currentlowpointJ = Number(lowpoints[k].j);
-  }
-};
-
-//findLowPoints("input.txt");
-
-//middle basin
-
-const inputteste = prepFile("inputmini.txt");
-const checkedLocations = new Map();
 const checkSingleBasin = function (
   startingI: number,
   startingJ: number,
   input: string[],
-  checkedLocations: Map<string, number | boolean>
+  checkedLocations: Map<string, number | boolean>,
+  newlocations: number[][]
 ): Map<string, number | boolean> {
-  let basins = 0;
-  const middlenumber = Number(input[startingI][startingJ]);
   const north =
     startingI - 1 < 0 ? -1 : Number(input[startingI - 1][startingJ]);
   const south =
@@ -149,45 +126,84 @@ const checkSingleBasin = function (
     startingJ + 1 > input[0].length - 1
       ? -1
       : Number(input[startingI][startingJ + 1]);
-  console.log(" ", north);
-  console.log(west, middlenumber, east);
-  console.log(" ", south);
+  // the middle number gets placed in the hash table because it belongs to the basin
   checkedLocations.set(`${startingI},${startingJ}`, true);
-  if (north !== -1 && north !== 9) {
-    checkedLocations.set(`${startingI - 1},${startingJ}`, north);
-  }
-  if (south !== -1 && south !== 9) {
-    checkedLocations.set(`${startingI + 1},${startingJ}`, south);
-  }
-  if (east !== -1 && east !== 9) {
-    checkedLocations.set(`${startingI},${startingJ + 1}`, east);
-  }
-  if (west !== -1 && west !== 9) {
-    checkedLocations.set(`${startingI},${startingJ - 1}`, west);
-  }
-  basins += 1; //middlenumber | maybe I can just count trues
-  //console.log(checkedLocations); // => new locations to check
 
-  for (const [key, value] of checkedLocations) {
-    if (value === 8) {
-      checkedLocations.set(key, true);
-      continue;
+  if (north > 0 && !checkedLocations.has(`${startingI - 1},${startingJ}`)) {
+    if (north === 9) {
+      checkedLocations.set(`${startingI - 1},${startingJ}`, false);
+    } else {
+      newlocations.push([startingI - 1, startingJ]);
     }
-    if (value !== true) {
-      const newcoord = key.split(",");
-      const newi = Number(newcoord[0]);
-      const newj = Number(newcoord[1]);
-      return checkSingleBasin(newi, newj, input, checkedLocations);
+  }
+
+  if (south > 0 && !checkedLocations.has(`${startingI + 1},${startingJ}`)) {
+    if (south === 9) {
+      checkedLocations.set(`${startingI + 1},${startingJ}`, false);
+    } else {
+      newlocations.push([startingI + 1, startingJ]);
     }
+  }
+  if (east > 0 && !checkedLocations.has(`${startingI},${startingJ + 1}`)) {
+    if (east === 9) {
+      checkedLocations.set(`${startingI},${startingJ + 1}`, false);
+    } else {
+      newlocations.push([startingI, startingJ + 1]);
+    }
+  }
+  if (west > 0 && !checkedLocations.has(`${startingI},${startingJ - 1}`)) {
+    if (west === 9) {
+      checkedLocations.set(`${startingI},${startingJ - 1}`, false);
+    } else {
+      newlocations.push([startingI, startingJ - 1]);
+    }
+  }
+
+  for (let i = 0; i < newlocations.length; i++) {
+    const newstartingI = newlocations[i][0];
+    const newstartingJ = newlocations[i][1];
+    let newlocationstocheck: number[][] = [];
+    checkSingleBasin(
+      newstartingI,
+      newstartingJ,
+      input,
+      checkedLocations,
+      newlocationstocheck
+    );
   }
   return checkedLocations;
 };
 
-// tenho d pensar quando é que para e que na segunda verificacao, tem de ver se o north, south etc é true
+const countElementsInBasins = function (file: string): number {
+  let lowpoints = findLowPoints(file);
+  let input = prepFile(file);
+  let basinsSizes: number[] = [];
+  for (let k = 0; k < lowpoints.length; k++) {
+    const middlenumberI = lowpoints[k].i;
+    const middlenumberJ = lowpoints[k].j;
+    let checkedLocations = new Map();
+    let locationsToCheck: number[][] = [];
+    checkSingleBasin(
+      middlenumberI,
+      middlenumberJ,
+      input,
+      checkedLocations,
+      locationsToCheck
+    );
+    let basins = 0;
+    for (const [key, value] of checkedLocations) {
+      if (value === true) {
+        basins += 1;
+      }
+    }
+    basinsSizes.push(basins);
+  }
+  basinsSizes.sort(sorter);
+  return basinsSizes[0] * basinsSizes[1] * basinsSizes[2];
+};
 
-checkSingleBasin(2, 2, inputteste, checkedLocations);
+const sorter = function (a: number, b: number): number {
+  return b - a;
+};
 
-// if number checked is east => check north, east, south
-// if number checked is south => check east, west, south
-// if number checked is north => check north, east, west
-// if number checked is west => check west, north, south
+console.log(countElementsInBasins("input.txt"));
