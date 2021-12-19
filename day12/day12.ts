@@ -187,10 +187,9 @@ interface NodeTypeTwice {
   adjacentNodes: string[];
   bigcave: boolean;
   visitTwice: boolean;
-  visits: number;
 }
 
-const storeLocationsTwice = function (
+const storeLocationsPart2 = function (
   file: string
 ): Map<string, NodeTypeTwice> {
   const input = prepFile(file);
@@ -215,17 +214,16 @@ const storeLocationsTwice = function (
         adjacentNodes: [pathto],
         bigcave: upperOrLowerCase,
         visitTwice: false,
-        visits: 0,
       });
     }
   }
   return locations;
 };
 
-const createNodeConnectionsTwice = function (
+const createNodeConnectionsPart2 = function (
   file: string
 ): Map<string, NodeTypeTwice> {
-  const locationsMap = storeLocationsTwice(file);
+  const locationsMap = storeLocationsPart2(file);
   for (const [key, value] of locationsMap) {
     if (key.toUpperCase() === key) {
       const directNodeConnections = value.adjacentNodes;
@@ -247,7 +245,6 @@ const createNodeConnectionsTwice = function (
             adjacentNodes: [key],
             bigcave: upperOrLowerCase,
             visitTwice: false,
-            visits: 0,
           });
         }
       });
@@ -279,42 +276,52 @@ const createNodeConnectionsTwice = function (
             adjacentNodes: [key],
             bigcave: upperOrLowerCase,
             visitTwice: false,
-            visits: 0,
           });
         }
       });
     }
   }
-  console.log(locationsMap);
   return locationsMap;
 };
 
-createNodeConnectionsTwice("inputmini.txt");
-
-const createPathsTwice = function (file: string) {
+const createPathsPart2 = function (file: string) {
   const allConnections: Map<string, NodeTypeTwice> =
-    createNodeConnectionsTwice(file);
+    createNodeConnectionsPart2(file);
   const startNode = allConnections.get("start");
+  let bigListOfPaths: string[][][] = [];
   if (startNode !== undefined) {
-    let listOfPaths: string[][] = [];
-    for (let i = 0; i < startNode.adjacentNodes.length; i++) {
-      const currentNode = startNode.adjacentNodes[i];
-      let path = ["start", currentNode];
-      listOfPaths.concat(
-        createPathAfterStartTwice(
-          listOfPaths,
-          path,
-          allConnections,
-          currentNode
-        )
-      );
+    for (const [key, value] of allConnections) {
+      let listOfPaths: string[][] = [];
+      const copyMap = new Map(allConnections);
+      if (key.toUpperCase() !== key && key !== "start" && key !== "end") {
+        const nodeToUpdate = copyMap.get(key);
+        if (nodeToUpdate !== undefined) {
+          let copyNode = Object.assign({}, nodeToUpdate);
+          copyNode.visitTwice = true;
+          copyMap.set(key, copyNode);
+        }
+      }
+      for (let i = 0; i < startNode.adjacentNodes.length; i++) {
+        const currentNode = startNode.adjacentNodes[i];
+        let path = ["start", currentNode];
+        let nodeValues = copyMap.get(currentNode);
+        if (nodeValues !== undefined) {
+          if (nodeValues.visitTwice) {
+            let copyCurrentNode = Object.assign({}, nodeValues);
+            copyMap.set(currentNode, copyCurrentNode);
+          }
+        }
+        listOfPaths.concat(
+          createPathAfterStartPart2(listOfPaths, path, copyMap, currentNode)
+        );
+      }
+      bigListOfPaths.push(listOfPaths);
     }
-    console.log(listOfPaths);
-    return listOfPaths;
+    return bigListOfPaths.flat();
   }
 };
 
-const createPathAfterStartTwice = function (
+const createPathAfterStartPart2 = function (
   listOfPaths: string[][],
   path: string[],
   allConnections: Map<string, NodeTypeTwice>,
@@ -324,16 +331,31 @@ const createPathAfterStartTwice = function (
   if (adjacentNodes !== undefined) {
     for (let i = 0; i < adjacentNodes.adjacentNodes.length; i++) {
       let copyPath = Array.from(path);
+      if (copyPath[copyPath.length - 1] === "end") {
+        continue;
+      }
       const currentAdjacentNode = adjacentNodes.adjacentNodes[i];
       const nodeInMap = allConnections.get(currentAdjacentNode);
       if (nodeInMap !== undefined) {
-        if (!nodeInMap.bigcave && copyPath.includes(currentAdjacentNode)) {
-          continue;
+        if (!nodeInMap.bigcave) {
+          if (!nodeInMap.visitTwice && copyPath.includes(currentAdjacentNode)) {
+            continue;
+          } else if (nodeInMap.visitTwice) {
+            let countOcurrencesOfNodeInPath = 0;
+            copyPath.forEach((node) =>
+              node === currentAdjacentNode
+                ? (countOcurrencesOfNodeInPath += 1)
+                : null
+            );
+            if (countOcurrencesOfNodeInPath > 1) {
+              continue;
+            }
+          }
         }
       }
       copyPath.push(currentAdjacentNode);
       listOfPaths.push(copyPath);
-      listOfPaths = createPathAfterStart(
+      listOfPaths = createPathAfterStartPart2(
         listOfPaths,
         copyPath,
         allConnections,
@@ -345,6 +367,24 @@ const createPathAfterStartTwice = function (
   return listOfPaths;
 };
 
-createPathsTwice("inputmini.txt");
+const countValidPathsTwice = function (file: string) {
+  const allPaths = createPathsPart2(file);
+  if (allPaths !== undefined) {
+    let uniquePaths: Map<string, number> = new Map();
+    let uniquePathsCount = 0;
+    for (let i = 0; i < allPaths.length; i++) {
+      const currentPath = allPaths[i];
+      if (currentPath[currentPath.length - 1] === "end") {
+        if (!uniquePaths.has(currentPath.toString())) {
+          const keyname = currentPath.toString();
+          uniquePaths.set(keyname, 1);
+          uniquePathsCount += 1;
+        }
+      }
+    }
+    console.log(uniquePathsCount);
+    return uniquePathsCount;
+  }
+};
 
-//tenho de contar todos os paths experimentando todos os nodes pequenos que possam ser visitados 2 vezes
+countValidPathsTwice("input.txt");
