@@ -75,171 +75,145 @@ const countPoints = function (file: string) {
   return mostCommon - leastCommon;
 };
 
-const applyRulesSingle = function (
-  startingPoint: string,
-  rules: Map<string, string>
-) {
-  let finalString: string = "";
-  for (let i = 0; i < startingPoint.length - 1; i++) {
-    const pair = startingPoint.substring(i, i + 2);
-    if (i === 0) {
-      finalString += pair[0];
-    }
-    const rule = rules.get(pair);
-    if (rule !== undefined) {
-      finalString += rule;
-    }
-    finalString += pair[1];
-  }
+//part 2
 
-  return finalString;
-};
-
-const runStepsSingle = function (
-  numberSteps: number,
-  rules: Map<string, string>,
-  pair: string,
-  firstPair: boolean
-): string {
-  let steps = 0;
-  while (steps < numberSteps) {
-    pair = applyRulesSingle(pair, rules);
-    steps += 1;
-  }
-  if (!firstPair) {
-    pair = pair.substring(1);
-  }
-  return pair;
-};
-
-const runStepsTotal = function (file: string, numberSteps: number) {
+const countLetters = function (
+  file: string,
+  steps: number
+): Map<string, number> {
   const input = prepFile(file);
   const rules = input[1];
-  const entireString = input[0];
-  let pairs: string[] = [];
-  for (let i = 0; i < entireString.length - 1; i++) {
-    const pair = entireString.substring(i, i + 2);
-    pairs.push(pair);
-  }
-  for (let j = 0; j < pairs.length; j++) {
-    const currentPair = pairs[j];
-    let resultingString: string = "";
-    if (j === 0) {
-      resultingString = runStepsSingle(numberSteps, rules, currentPair, true);
+  const startingString = input[0];
+  let internalSteps = 0;
+  let startingPairs: string[] = [];
+  let pairMap: Map<string, number> = new Map();
+  let letterMap: Map<string, number> = new Map();
+  for (let i = 0; i < startingString.length - 1; i++) {
+    if (letterMap.has(startingString[i])) {
+      const currentCount = letterMap.get(startingString[i]);
+      if (currentCount !== undefined) {
+        letterMap.set(startingString[i], currentCount + 1);
+      }
     } else {
-      resultingString = runStepsSingle(numberSteps, rules, currentPair, false);
+      letterMap.set(startingString[i], 1);
     }
-    console.log(resultingString);
+    if (i === startingString.length - 2) {
+      if (letterMap.has(startingString[i + 1])) {
+        const currentCount = letterMap.get(startingString[i + 1]);
+        if (currentCount !== undefined) {
+          letterMap.set(startingString[i + 1], currentCount + 1);
+        }
+      } else {
+        letterMap.set(startingString[i + 1], 1);
+      }
+    }
+    const pair = startingString.substring(i, i + 2);
+    startingPairs.push(pair);
+    if (pairMap.has(pair)) {
+      const value = pairMap.get(pair);
+      if (value !== undefined) {
+        pairMap.set(pair, value + 1);
+      }
+    } else {
+      pairMap.set(pair, 1);
+    }
   }
-  //return letterMap;
+
+  while (internalSteps < steps) {
+    let copyMap: Map<string, number> = new Map();
+    for (const [key, value] of pairMap) {
+      copyMap.set(key, value);
+    }
+    for (const [key, value] of copyMap) {
+      if (value === 0) {
+        continue;
+      }
+
+      const letterToAdd = rules.get(key);
+
+      if (letterToAdd !== undefined) {
+        const pairCountOnCopyMap = copyMap.get(key);
+        const pairCountOnPairMap = pairMap.get(key);
+        const leftPair = key[0] + letterToAdd;
+        const rightPair = letterToAdd + key[1];
+        // update old pair that disappeared
+        if (
+          pairCountOnCopyMap !== undefined &&
+          pairMap.has(key) &&
+          pairCountOnPairMap !== undefined
+        ) {
+          pairMap.set(key, pairCountOnPairMap - pairCountOnCopyMap);
+        } else {
+          if (pairCountOnCopyMap !== undefined) {
+            pairMap.set(key, 0);
+          }
+        }
+        // update new pairs
+        if (pairMap.has(leftPair)) {
+          const currentLeftPairCount = pairMap.get(leftPair);
+          if (
+            currentLeftPairCount !== undefined &&
+            pairCountOnCopyMap !== undefined
+          ) {
+            pairMap.set(leftPair, currentLeftPairCount + pairCountOnCopyMap);
+          }
+        } else {
+          if (pairCountOnCopyMap !== undefined) {
+            pairMap.set(leftPair, pairCountOnCopyMap);
+          }
+        }
+        if (pairMap.has(rightPair)) {
+          const currentRightPairCount = pairMap.get(rightPair);
+          if (
+            currentRightPairCount !== undefined &&
+            pairCountOnCopyMap !== undefined
+          ) {
+            pairMap.set(rightPair, currentRightPairCount + pairCountOnCopyMap);
+          }
+        } else {
+          if (pairCountOnCopyMap !== undefined) {
+            pairMap.set(rightPair, pairCountOnCopyMap);
+          }
+        }
+        //update letter count
+        if (pairCountOnCopyMap !== undefined) {
+          if (letterMap.has(letterToAdd)) {
+            const currentLetterCount = letterMap.get(letterToAdd);
+            if (currentLetterCount !== undefined) {
+              letterMap.set(
+                letterToAdd,
+                currentLetterCount + pairCountOnCopyMap
+              );
+            }
+          } else {
+            letterMap.set(letterToAdd, pairCountOnCopyMap);
+          }
+        }
+      }
+    }
+    internalSteps += 1;
+  }
+
+  return letterMap;
 };
 
-// const countPointsFromMap = function (file: string, numberSteps: number) {
-//   const letterMap = runStepsTotal(file, numberSteps);
-//   let leastCommon = 0;
-//   let mostCommon = 0;
-//   for (const [key, value] of letterMap) {
-//     if (leastCommon === 0) {
-//       leastCommon = value;
-//     } else if (leastCommon > value) {
-//       leastCommon = value;
-//     }
-//     if (mostCommon === 0) {
-//       mostCommon = value;
-//     } else if (mostCommon < value) {
-//       mostCommon = value;
-//     }
-//   }
-//   return mostCommon - leastCommon;
-// };
+const countPointsFromMap = function (file: string, steps: number) {
+  const letterMap = countLetters(file, steps);
+  let leastCommon = 0;
+  let mostCommon = 0;
+  for (const [key, value] of letterMap) {
+    if (leastCommon === 0) {
+      leastCommon = value;
+    } else if (leastCommon > value) {
+      leastCommon = value;
+    }
+    if (mostCommon === 0) {
+      mostCommon = value;
+    } else if (mostCommon < value) {
+      mostCommon = value;
+    }
+  }
+  return mostCommon - leastCommon;
+};
 
-console.log(runStepsTotal("inputmini.txt", 8));
-
-// const applyRulesSingle = function (
-//   startingPoint: string,
-//   rules: Map<string, string>
-// ) {
-//   let finalString: string = "";
-//   for (let i = 0; i < startingPoint.length - 1; i++) {
-//     const pair = startingPoint.substring(i, i + 2);
-//     if (i === 0) {
-//       finalString += pair[0];
-//     }
-//     const rule = rules.get(pair);
-//     if (rule !== undefined) {
-//       finalString += rule;
-//     }
-//     finalString += pair[1];
-//   }
-
-//   return finalString;
-// };
-
-// const runStepsSingle = function (
-//   numberSteps: number,
-//   rules: Map<string, string>,
-//   pair: string,
-//   letterMap: Map<string, number>,
-//   firstPair: boolean
-// ): Map<string, number> {
-//   let steps = 0;
-//   while (steps < numberSteps) {
-//     pair = applyRulesSingle(pair, rules);
-//     steps += 1;
-//   }
-//   if (!firstPair) {
-//     pair = pair.substring(1);
-//   }
-//   for (let i = 0; i < pair.length; i++) {
-//     const letter = pair[i];
-//     if (letterMap.has(letter)) {
-//       const mapEntry = letterMap.get(letter);
-//       if (mapEntry !== undefined) {
-//         letterMap.set(letter, mapEntry + 1);
-//       }
-//     } else {
-//       letterMap.set(letter, 1);
-//     }
-//   }
-//   return letterMap;
-// };
-
-// const runStepsTotal = function (file: string, numberSteps: number) {
-//   const input = prepFile(file);
-//   const rules = input[1];
-//   const entireString = input[0];
-//   let pairs: string[] = [];
-//   for (let i = 0; i < entireString.length - 1; i++) {
-//     const pair = entireString.substring(i, i + 2);
-//     pairs.push(pair);
-//   }
-//   let letterMap: Map<string, number> = new Map();
-//   for (let j = 0; j < pairs.length; j++) {
-//     const currentPair = pairs[j];
-//     if (j === 0) {
-//       runStepsSingle(numberSteps, rules, currentPair, letterMap, true);
-//     } else {
-//       runStepsSingle(numberSteps, rules, currentPair, letterMap, false);
-//     }
-//   }
-//   return letterMap;
-// };
-
-// const countPointsFromMap = function (file: string, numberSteps: number) {
-//   const letterMap = runStepsTotal(file, numberSteps);
-//   let leastCommon = 0;
-//   let mostCommon = 0;
-//   for (const [key, value] of letterMap) {
-//     if (leastCommon === 0) {
-//       leastCommon = value;
-//     } else if (leastCommon > value) {
-//       leastCommon = value;
-//     }
-//     if (mostCommon === 0) {
-//       mostCommon = value;
-//     } else if (mostCommon < value) {
-//       mostCommon = value;
-//     }
-//   }
-//   return mostCommon - leastCommon;
-// };
+console.log(countPointsFromMap("input.txt", 40));
